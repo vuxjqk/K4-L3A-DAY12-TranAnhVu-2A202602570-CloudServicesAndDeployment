@@ -39,7 +39,7 @@ services:
     build: .
     image: day12-agent:prod
     ports:
-      - "8000:8000"
+      - "8000-8002:8000"             # dải cổng: đủ cho --scale agent=3
     environment:
       PORT: "8000"
       AGENT_API_KEY: ${AGENT_API_KEY}           # đọc từ .env, không viết thẳng khóa
