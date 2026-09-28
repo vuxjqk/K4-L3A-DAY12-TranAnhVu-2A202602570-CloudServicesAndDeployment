@@ -10,7 +10,7 @@
 
 | Mục | Nội dung |
 |-----|----------|
-| Họ và tên | Tran Anh Vu |
+| Họ và tên | Trần Anh Vũ |
 | Mã học viên | 2A202602570 |
 | Repo | https://github.com/vuxjqk/K4-L3A-DAY12-TranAnhVu-2A202602570-CloudServicesAndDeployment |
 
