@@ -21,14 +21,40 @@
 #            docker images day12-agent:prod     # xem dung lượng
 # ═══════════════════════════════════════════════════════════════════
 
-FROM python:3.11
+# ── Stage 1: builder — cài dependency vào /install, stage này bị bỏ đi sau build
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# Copy requirements riêng để layer pip install được cache khi chỉ sửa code
+COPY requirements.txt .
+RUN pip install --no-cache-dir --default-timeout=120 --retries 10 \
+        --prefix=/install -r requirements.txt
+
+
+# ── Stage 2: runtime — chỉ mang kết quả cài đặt sang, không compiler/cache
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8000
+
+COPY --from=builder /install /usr/local
+
+# User thường, không có quyền root
+RUN useradd --create-home --uid 10001 appuser
 
 WORKDIR /app
+COPY --chown=appuser:appuser app ./app
+COPY --chown=appuser:appuser utils ./utils
 
-COPY . .
-
-RUN pip install -r requirements.txt
+USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Gọi /health trên đúng cổng $PORT mà app đang nghe
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${PORT:-8000}/health', timeout=4).read()" || exit 1
+
+# Dạng shell để nội suy $PORT do platform cấp; exec để uvicorn là PID 1 nhận SIGTERM
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
